@@ -1,6 +1,6 @@
 from typing import Union, Annotated
 from yt_dlp import YoutubeDL
-from fastapi import FastAPI, responses, Header
+from fastapi import FastAPI, responses, Header, HTTPException
 import pyotp
 from dotenv import load_dotenv, dotenv_values
 
@@ -33,9 +33,12 @@ def read_root():
 async def get_yt(id: str, otp: Annotated[str, Header()]):
     password = config['PASSWORD']
     totp = pyotp.TOTP(password)
-    totp.verify(otp)
+    if totp.verify(otp):
+        print('OTP Verified')
+    else:
+        raise HTTPException(status_code=401, detail='Invalid OTP')
     if check_video_id(id) is False:
-        raise Exception('Invalid video_id')
+        raise HTTPException(status_code=400, detail='Invalid Video ID')
     if id.startswith('https://www.youtube.com/watch?v='):
         id = id.split('https://www.youtube.com/watch?v=')[1]
 
