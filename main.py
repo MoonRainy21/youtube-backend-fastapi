@@ -1,11 +1,12 @@
 from typing import Union, Annotated
 from yt_dlp import YoutubeDL
-from fastapi import FastAPI, responses, Depends
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import FastAPI, responses, Header
+import pyotp
+from dotenv import load_dotenv, dotenv_values
 
+load_dotenv()
+config = dotenv_values('.env')
 app = FastAPI()
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def check_video_id(video_id: str):
     if video_id is None: return False
@@ -29,7 +30,10 @@ def read_root():
     return {"Hello": "World"} 
 
 @app.get("/yt/audio")
-async def get_yt(id: str, token: Annotated[str, Depends(oauth2_scheme)]):
+async def get_yt(id: str, otp: Annotated[str, Header()]):
+    password = config['PASSWORD']
+    totp = pyotp.TOTP(password)
+    totp.verify(otp)
     if check_video_id(id) is False:
         raise Exception('Invalid video_id')
     if id.startswith('https://www.youtube.com/watch?v='):
