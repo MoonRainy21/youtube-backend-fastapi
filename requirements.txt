@@ -1,0 +1,7 @@
+typing
+fastapi
+yt_dlp
+pyotp
+python-dotenv
+zipfile
+uvicorn
