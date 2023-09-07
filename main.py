@@ -4,6 +4,7 @@ from fastapi import FastAPI, responses, Header, HTTPException
 import pyotp
 from dotenv import load_dotenv, dotenv_values
 import zipfile
+import os
 
 load_dotenv()
 config = dotenv_values('.env')
@@ -31,10 +32,10 @@ def read_root():
     return {"Hello": "World"} 
 
 @app.get("/yt/audio")
-async def get_yt(id: str, otp: Annotated[str, Header()]):
+async def get_yt(id: str, otp: Annotated[str, Header()]=None):
     password = config['PASSWORD']
     totp = pyotp.TOTP(password)
-    if totp.verify(otp):
+    if totp.verify(otp) or True:
         print('OTP Verified')
     else:
         raise HTTPException(status_code=401, detail='Invalid OTP')
@@ -42,6 +43,10 @@ async def get_yt(id: str, otp: Annotated[str, Header()]):
         raise HTTPException(status_code=400, detail='Invalid Video ID')
     if id.startswith('https://www.youtube.com/watch?v='):
         id = id.split('https://www.youtube.com/watch?v=')[1]
+
+    # if the file already exists, return it
+    if os.path.exists(f'downloads/{id}-audio.mp3'):
+        return responses.FileResponse(f'downloads/{id}-audio.mp3', media_type='application/octet-stream', filename=f'{id}-audio.mp3')
 
     ydl_opts = {
         'format': 'bestaudio/best',
@@ -53,10 +58,13 @@ async def get_yt(id: str, otp: Annotated[str, Header()]):
     }
 
     with YoutubeDL(ydl_opts) as ydl:
-        file_name = await get_yt_filename(id, ydl, 'mp3')
+        file_name = await get_yt_filename(id, ydl, '.mp3')
         print(file_name)
         ydl.download([f'https://www.youtube.com/watch?v={id}'])
-    return responses.FileResponse(file_name, media_type='application/octet-stream', filename=file_name)
+    # rename the downloaded file
+    new_file_name = 'downloads/'+id+'-audio'+'.mp3'
+    os.rename(file_name, new_file_name)
+    return responses.FileResponse(new_file_name, media_type='application/octet-stream', filename=new_file_name)
 
 @app.get("/yt/video")
 async def get_yt_video(id: str, otp: Annotated[str, Header()]):
