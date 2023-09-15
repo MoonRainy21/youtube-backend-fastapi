@@ -1,6 +1,7 @@
 from typing import Union, Annotated
 from yt_dlp import YoutubeDL
 from fastapi import FastAPI, responses, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 import pyotp
 from dotenv import load_dotenv, dotenv_values
 import zipfile
@@ -9,6 +10,14 @@ import os
 load_dotenv()
 config = dotenv_values('.env')
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def check_video_id(video_id: str):
     if video_id is None: return False
