@@ -37,11 +37,12 @@ async def get_yt_filename(video_id: str, ydl: YoutubeDL, ext: str):
     return file_name
 
 # OTP
-allowed_endpoints = ['/']
-@app.middelware("http")
+@app.middleware("http")
 async def verify_otp(request: Request, call_next): 
-    if request.url.path in allowed_endpoints:
-        return await call_next(request) 
+    if not request.url.path.startswith('/yt'):
+        return await call_next(request)
+    if 'otp' not in request.headers:
+        raise HTTPException(status_code=401, detail='OTP not provided')
     otp = request.headers['otp']
     password = config['PASSWORD']
     totp = pyotp.TOTP(password)
