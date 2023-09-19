@@ -1,6 +1,6 @@
 from typing import Union, Annotated
 from yt_dlp import YoutubeDL
-from fastapi import FastAPI, responses, Header, HTTPException
+from fastapi import FastAPI, responses, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 import pyotp
 from dotenv import load_dotenv, dotenv_values
@@ -36,20 +36,28 @@ async def get_yt_filename(video_id: str, ydl: YoutubeDL, ext: str):
     file_name = ''.join(file_name)
     return file_name
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"} 
-
-@app.get("/yt/title")
-async def get_yt_title(id: str, otp: Annotated[str, Header()]):
+# OTP
+allowed_endpoints = ['/']
+@app.middelware("http")
+async def verify_otp(request: Request, call_next): 
+    if request.url.path in allowed_endpoints:
+        return await call_next(request) 
+    otp = request.headers['otp']
     password = config['PASSWORD']
     totp = pyotp.TOTP(password)
     if totp.verify(otp):
         print('OTP Verified')
     else:
         raise HTTPException(status_code=401, detail='Invalid OTP')
-    if check_video_id(id) is False:
-        raise HTTPException(status_code=400, detail='Invalid Video ID')
+    response = await call_next(request)
+    return response
+
+@app.get("/")
+def read_root():
+    return {"Hello": "World"} 
+
+@app.get("/yt/title")
+async def get_yt_title(id: str, otp: Annotated[str, Header()]):
     if id.startswith('https://www.youtube.com/watch?v='):
         id = id.split('https://www.youtube.com/watch?v=')[1]
     ydl_opts = {
@@ -67,12 +75,6 @@ async def get_yt_title(id: str, otp: Annotated[str, Header()]):
 
 @app.get("/yt/audio")
 async def get_yt(id: str, otp: Annotated[str, Header()]=None):
-    password = config['PASSWORD']
-    totp = pyotp.TOTP(password)
-    if totp.verify(otp) or True:
-        print('OTP Verified')
-    else:
-        raise HTTPException(status_code=401, detail='Invalid OTP')
     if check_video_id(id) is False:
         raise HTTPException(status_code=400, detail='Invalid Video ID')
     if id.startswith('https://www.youtube.com/watch?v='):
@@ -104,12 +106,6 @@ async def get_yt(id: str, otp: Annotated[str, Header()]=None):
 
 @app.get("/yt/video")
 async def get_yt_video(id: str, otp: Annotated[str, Header()]):
-    password = config['PASSWORD']
-    totp = pyotp.TOTP(password)
-    if totp.verify(otp):
-        print('OTP Verified')
-    else:
-        raise HTTPException(status_code=401, detail='Invalid OTP')
     if check_video_id(id) is False:
         raise HTTPException(status_code=400, detail='Invalid Video ID')
     if id.startswith('https://www.youtube.com/watch?v='):
@@ -131,12 +127,6 @@ async def get_yt_video(id: str, otp: Annotated[str, Header()]):
 
 @app.get("/yt/playlist-audio")
 async def get_yt_playlist(id: str, otp: Annotated[str, Header()]):
-    password = config['PASSWORD']
-    totp = pyotp.TOTP(password)
-    if totp.verify(otp):
-        print('OTP Verified')
-    else:
-        raise HTTPException(status_code=401, detail='Invalid OTP')
     if check_video_id(id) is False:
         raise HTTPException(status_code=400, detail='Invalid Video ID')
     if id.startswith('https://www.youtube.com/watch?v='):
