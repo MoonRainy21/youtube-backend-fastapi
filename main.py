@@ -41,9 +41,9 @@ async def get_yt_filename(video_id: str, ydl: YoutubeDL, ext: str):
 async def verify_otp(request: Request, call_next): 
     if not request.url.path.startswith('/yt'):
         return await call_next(request)
-    if 'otp' not in request.headers:
+    if 'X-TOTP' not in request.headers:
         raise HTTPException(status_code=401, detail='OTP not provided')
-    otp = request.headers['otp']
+    otp = request.headers['X-TOTP']
     password = config['PASSWORD']
     totp = pyotp.TOTP(password)
     if totp.verify(otp):
@@ -58,7 +58,7 @@ def read_root():
     return {"Hello": "World"} 
 
 @app.get("/yt/title")
-async def get_yt_title(id: str, otp: Annotated[str, Header()]):
+async def get_yt_title(id: str):
     if id.startswith('https://www.youtube.com/watch?v='):
         id = id.split('https://www.youtube.com/watch?v=')[1]
     ydl_opts = {
@@ -75,7 +75,7 @@ async def get_yt_title(id: str, otp: Annotated[str, Header()]):
         return info['title']
 
 @app.get("/yt/audio")
-async def get_yt(id: str, otp: Annotated[str, Header()]=None):
+async def get_yt(id: str):
     if check_video_id(id) is False:
         raise HTTPException(status_code=400, detail='Invalid Video ID')
     if id.startswith('https://www.youtube.com/watch?v='):
@@ -106,7 +106,7 @@ async def get_yt(id: str, otp: Annotated[str, Header()]=None):
                                   headers={'Access-Control-Expose-Headers': 'Content-Disposition'})
 
 @app.get("/yt/video")
-async def get_yt_video(id: str, otp: Annotated[str, Header()]):
+async def get_yt_video(id: str):
     if check_video_id(id) is False:
         raise HTTPException(status_code=400, detail='Invalid Video ID')
     if id.startswith('https://www.youtube.com/watch?v='):
