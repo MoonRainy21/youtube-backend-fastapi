@@ -1,6 +1,6 @@
 from typing import Union, Annotated
 from yt_dlp import YoutubeDL
-from fastapi import FastAPI, responses, Header, HTTPException, Request
+from fastapi import FastAPI, responses, Header, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 import pyotp
 from dotenv import load_dotenv, dotenv_values
@@ -41,15 +41,15 @@ async def get_yt_filename(video_id: str, ydl: YoutubeDL, ext: str):
 async def verify_otp(request: Request, call_next): 
     if not request.url.path.startswith('/yt'):
         return await call_next(request)
-    if 'X-TOTP' not in request.headers:
-        raise HTTPException(status_code=401, detail='OTP not provided')
+    if not ('X-TOTP' in request.headers):
+        return Response(status_code=401, content='OTP Required')
     otp = request.headers['X-TOTP']
     password = config['PASSWORD']
     totp = pyotp.TOTP(password)
     if totp.verify(otp):
         print('OTP Verified')
     else:
-        raise HTTPException(status_code=401, detail='Invalid OTP')
+        return Response(status_code=401, content='Invalid OTP')
     response = await call_next(request)
     return response
 
